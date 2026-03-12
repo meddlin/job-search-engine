@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
+import { sql } from '@/lib/db';
+import { resetSeedFlag } from '@/lib/init-db';
 
 async function resetDatabase() {
-  const { sql } = await import('@/lib/db');
+  resetSeedFlag();
   
   const seedDataEntries = [
     { name: 'John Doe', company_info: 'Acme Corp', url: 'https://acme.com', industry: 'Technology' },

@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { getAllPeople, createPerson } from '@/lib/people';
+import { ensureSeeded } from '@/lib/init-db';
 
 export async function GET() {
   try {
+    await ensureSeeded();
     const people = await getAllPeople();
     return NextResponse.json(people);
   } catch (error) {
@@ -13,6 +15,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    await ensureSeeded();
     const body = await request.json();
     const { first_name, last_name, email, phone, company, notes } = body;
 
