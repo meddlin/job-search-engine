@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -13,57 +13,61 @@ import {
 } from '@tanstack/react-table';
 
 interface Person {
-  id: string;
-  firstName: string;
-  lastName: string;
+  id: number;
+  first_name: string;
+  last_name: string;
   email: string;
   phone: string;
   company: string;
   notes: string;
 }
 
-const initialData: Person[] = [
-  { id: '1', firstName: 'John', lastName: 'Doe', email: 'john.doe@example.com', phone: '555-0101', company: 'Acme Corp', notes: 'CEO' },
-  { id: '2', firstName: 'Jane', lastName: 'Smith', email: 'jane.smith@example.com', phone: '555-0102', company: 'TechStart Inc', notes: 'CTO' },
-  { id: '3', firstName: 'Bob', lastName: 'Johnson', email: 'bob.johnson@example.com', phone: '555-0103', company: 'Global Solutions', notes: 'Project Manager' },
-  { id: '4', firstName: 'Alice', lastName: 'Brown', email: 'alice.brown@example.com', phone: '555-0104', company: 'DataFlow LLC', notes: 'Data Analyst' },
-  { id: '5', firstName: 'Charlie', lastName: 'Wilson', email: 'charlie.wilson@example.com', phone: '555-0105', company: 'CloudNine', notes: 'DevOps Engineer' },
-  { id: '6', firstName: 'Diana', lastName: 'Martinez', email: 'diana.martinez@example.com', phone: '555-0106', company: 'InnovateTech', notes: 'Product Manager' },
-  { id: '7', firstName: 'Ethan', lastName: 'Lee', email: 'ethan.lee@example.com', phone: '555-0107', company: 'CyberSafe', notes: 'Security Specialist' },
-  { id: '8', firstName: 'Fiona', lastName: 'Garcia', email: 'fiona.garcia@example.com', phone: '555-0108', company: 'AI Labs', notes: 'ML Engineer' },
-  { id: '9', firstName: 'George', lastName: 'Taylor', email: 'george.taylor@example.com', phone: '555-0109', company: 'QuantumSoft', notes: 'Software Engineer' },
-  { id: '10', firstName: 'Hannah', lastName: 'White', email: 'hannah.white@example.com', phone: '555-0110', company: 'NetWorks Inc', notes: 'Network Admin' },
-  { id: '11', firstName: 'Ian', lastName: 'Clark', email: 'ian.clark@example.com', phone: '555-0111', company: 'WebFlow', notes: 'Frontend Developer' },
-  { id: '12', firstName: 'Julia', lastName: 'Hall', email: 'julia.hall@example.com', phone: '555-0112', company: 'MobileFirst', notes: 'Mobile Developer' },
-];
-
 export default function PeopleTable() {
-  const [data, setData] = useState<Person[]>(initialData);
+  const [data, setData] = useState<Person[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Person | null>(null);
-  const [formData, setFormData] = useState<Person>({
-    id: '',
-    firstName: '',
-    lastName: '',
+  const [formData, setFormData] = useState<Omit<Person, 'id'>>({
+    first_name: '',
+    last_name: '',
     email: '',
     phone: '',
     company: '',
     notes: '',
   });
 
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/people');
+      if (!response.ok) throw new Error('Failed to fetch data');
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
       {
-        accessorKey: 'firstName',
+        accessorKey: 'first_name',
         header: 'First Name',
         cell: (info) => (
           <span className="font-medium text-zinc-50">{info.getValue() as string}</span>
         ),
       },
       {
-        accessorKey: 'lastName',
+        accessorKey: 'last_name',
         header: 'Last Name',
         cell: (info) => (
           <span className="font-medium text-zinc-50">{info.getValue() as string}</span>
@@ -157,31 +161,78 @@ export default function PeopleTable() {
 
   const handleAdd = () => {
     setEditingEntry(null);
-    setFormData({ id: '', firstName: '', lastName: '', email: '', phone: '', company: '', notes: '' });
+    setFormData({ first_name: '', last_name: '', email: '', phone: '', company: '', notes: '' });
     setIsModalOpen(true);
   };
 
   const handleEdit = (entry: Person) => {
     setEditingEntry(entry);
-    setFormData(entry);
+    setFormData({
+      first_name: entry.first_name,
+      last_name: entry.last_name,
+      email: entry.email,
+      phone: entry.phone,
+      company: entry.company,
+      notes: entry.notes,
+    });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this person?')) {
-      setData(data.filter((item) => item.id !== id));
+      try {
+        const response = await fetch(`/api/people/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete');
+        setData(data.filter((item) => item.id !== id));
+      } catch (err) {
+        alert('Failed to delete person');
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingEntry) {
-      setData(data.map((item) => (item.id === editingEntry.id ? formData : item)));
-    } else {
-      setData([...data, { ...formData, id: Date.now().toString() }]);
+    try {
+      if (editingEntry) {
+        const response = await fetch(`/api/people/${editingEntry.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (!response.ok) throw new Error('Failed to update');
+        const updated = await response.json();
+        setData(data.map((item) => (item.id === editingEntry.id ? updated : item)));
+      } else {
+        const response = await fetch('/api/people', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (!response.ok) throw new Error('Failed to create');
+        const newEntry = await response.json();
+        setData([...data, newEntry]);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save person');
     }
-    setIsModalOpen(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-zinc-400">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-400">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -305,8 +356,8 @@ export default function PeopleTable() {
                   <input
                     type="text"
                     required
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    value={formData.first_name}
+                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
                     className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                 </div>
@@ -315,8 +366,8 @@ export default function PeopleTable() {
                   <input
                     type="text"
                     required
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    value={formData.last_name}
+                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
                     className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                 </div>

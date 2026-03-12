@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   useReactTable,
   getCoreRowModel,
@@ -13,41 +13,45 @@ import {
 } from '@tanstack/react-table';
 
 interface DataEntry {
-  id: string;
+  id: number;
   name: string;
-  companyInfo: string;
+  company_info: string;
   url: string;
   industry: string;
 }
 
-const initialData: DataEntry[] = [
-  { id: '1', name: 'John Doe', companyInfo: 'Acme Corp', url: 'https://acme.com', industry: 'Technology' },
-  { id: '2', name: 'Jane Smith', companyInfo: 'TechStart Inc', url: 'https://techstart.io', industry: 'Software' },
-  { id: '3', name: 'Bob Johnson', companyInfo: 'Global Solutions', url: 'https://globalsolutions.com', industry: 'Consulting' },
-  { id: '4', name: 'Alice Brown', companyInfo: 'DataFlow LLC', url: 'https://dataflow.dev', industry: 'Data Analytics' },
-  { id: '5', name: 'Charlie Wilson', companyInfo: 'CloudNine', url: 'https://cloudnine.cloud', industry: 'Cloud Services' },
-  { id: '6', name: 'Diana Martinez', companyInfo: 'InnovateTech', url: 'https://innovatetech.co', industry: 'Technology' },
-  { id: '7', name: 'Ethan Lee', companyInfo: 'CyberSafe', url: 'https://cybersafe.io', industry: 'Cybersecurity' },
-  { id: '8', name: 'Fiona Garcia', companyInfo: 'AI Labs', url: 'https://ailabs.ai', industry: 'Artificial Intelligence' },
-  { id: '9', name: 'George Taylor', companyInfo: 'QuantumSoft', url: 'https://quantumsoft.com', industry: 'Software' },
-  { id: '10', name: 'Hannah White', companyInfo: 'NetWorks Inc', url: 'https://networks.inc', industry: 'Networking' },
-  { id: '11', name: 'Ian Clark', companyInfo: 'WebFlow', url: 'https://webflow.io', industry: 'Web Development' },
-  { id: '12', name: 'Julia Hall', companyInfo: 'MobileFirst', url: 'https://mobilefirst.app', industry: 'Mobile Apps' },
-];
-
 export default function DataTable() {
-  const [data, setData] = useState<DataEntry[]>(initialData);
+  const [data, setData] = useState<DataEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<DataEntry | null>(null);
-  const [formData, setFormData] = useState<DataEntry>({
-    id: '',
+  const [formData, setFormData] = useState<Omit<DataEntry, 'id'>>({
     name: '',
-    companyInfo: '',
+    company_info: '',
     url: '',
     industry: '',
   });
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/data');
+      if (!response.ok) throw new Error('Failed to fetch data');
+      const result = await response.json();
+      setData(result);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const columns = useMemo<ColumnDef<DataEntry>[]>(
     () => [
@@ -59,7 +63,7 @@ export default function DataTable() {
         ),
       },
       {
-        accessorKey: 'companyInfo',
+        accessorKey: 'company_info',
         header: 'Company Info',
         cell: (info) => (
           <span className="text-zinc-400">{info.getValue() as string}</span>
@@ -143,31 +147,76 @@ export default function DataTable() {
 
   const handleAdd = () => {
     setEditingEntry(null);
-    setFormData({ id: '', name: '', companyInfo: '', url: '', industry: '' });
+    setFormData({ name: '', company_info: '', url: '', industry: '' });
     setIsModalOpen(true);
   };
 
   const handleEdit = (entry: DataEntry) => {
     setEditingEntry(entry);
-    setFormData(entry);
+    setFormData({
+      name: entry.name,
+      company_info: entry.company_info,
+      url: entry.url,
+      industry: entry.industry,
+    });
     setIsModalOpen(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: number) => {
     if (confirm('Are you sure you want to delete this entry?')) {
-      setData(data.filter((item) => item.id !== id));
+      try {
+        const response = await fetch(`/api/data/${id}`, { method: 'DELETE' });
+        if (!response.ok) throw new Error('Failed to delete');
+        setData(data.filter((item) => item.id !== id));
+      } catch (err) {
+        alert('Failed to delete entry');
+      }
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingEntry) {
-      setData(data.map((item) => (item.id === editingEntry.id ? formData : item)));
-    } else {
-      setData([...data, { ...formData, id: Date.now().toString() }]);
+    try {
+      if (editingEntry) {
+        const response = await fetch(`/api/data/${editingEntry.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (!response.ok) throw new Error('Failed to update');
+        const updated = await response.json();
+        setData(data.map((item) => (item.id === editingEntry.id ? updated : item)));
+      } else {
+        const response = await fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        });
+        if (!response.ok) throw new Error('Failed to create');
+        const newEntry = await response.json();
+        setData([...data, newEntry]);
+      }
+      setIsModalOpen(false);
+    } catch (err) {
+      alert('Failed to save entry');
     }
-    setIsModalOpen(false);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-zinc-400">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-red-400">Error: {error}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
@@ -300,8 +349,8 @@ export default function DataTable() {
                 <input
                   type="text"
                   required
-                  value={formData.companyInfo}
-                  onChange={(e) => setFormData({ ...formData, companyInfo: e.target.value })}
+                  value={formData.company_info}
+                  onChange={(e) => setFormData({ ...formData, company_info: e.target.value })}
                   className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 />
               </div>
