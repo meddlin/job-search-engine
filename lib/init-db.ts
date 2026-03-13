@@ -34,6 +34,21 @@ export async function ensureTablesExist() {
     );
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS job_applications (
+      id SERIAL PRIMARY KEY,
+      company_name VARCHAR(255) NOT NULL,
+      position_title VARCHAR(255) NOT NULL,
+      source_type VARCHAR(20) NOT NULL CHECK (source_type IN ('direct', 'recruiter')),
+      status VARCHAR(20) NOT NULL CHECK (status IN ('initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept')),
+      salary_range VARCHAR(100),
+      job_url VARCHAR(500),
+      notes TEXT,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+  `;
+
   initialized = true;
   console.log('Database tables initialized successfully');
 }
