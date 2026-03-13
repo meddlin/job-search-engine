@@ -17,28 +17,48 @@ export async function POST(request: Request) {
   try {
     await ensureTablesExist();
     const body = await request.json();
-    const { company_name, position_title, source_type, status, salary_range, job_url, notes } = body;
+    const {
+      company_name,
+      position_title,
+      status,
+      remote,
+      applied,
+      notes,
+      job_url,
+      job_description,
+      recruiter_name,
+      recruiting_agency,
+      recruiter_email,
+      recruiter_phone,
+      recruiter_linkedin,
+    } = body;
 
-    if (!company_name || !position_title || !source_type || !status) {
+    if (!status) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!['direct', 'recruiter'].includes(source_type)) {
-      return NextResponse.json({ error: 'Invalid source_type' }, { status: 400 });
+    if (status && !['initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept'].includes(status)) {
+      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
-    if (!['initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept'].includes(status)) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    if (remote && !['yes', 'no', 'hybrid'].includes(remote)) {
+      return NextResponse.json({ error: 'Invalid remote value' }, { status: 400 });
     }
 
     const newJob = await createJobApplication({
       company_name,
       position_title,
-      source_type,
       status,
-      salary_range,
-      job_url,
+      remote,
+      applied,
       notes,
+      job_url,
+      job_description,
+      recruiter_name,
+      recruiting_agency,
+      recruiter_email,
+      recruiter_phone,
+      recruiter_linkedin,
     });
     return NextResponse.json(newJob, { status: 201 });
   } catch (error) {

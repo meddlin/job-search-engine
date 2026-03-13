@@ -16,8 +16,8 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 
-    if (body.source_type && !['direct', 'recruiter'].includes(body.source_type)) {
-      return NextResponse.json({ error: 'Invalid source_type' }, { status: 400 });
+    if (body.remote && body.remote !== '' && !['yes', 'no', 'hybrid'].includes(body.remote)) {
+      return NextResponse.json({ error: 'Invalid remote value' }, { status: 400 });
     }
 
     if (body.status) {

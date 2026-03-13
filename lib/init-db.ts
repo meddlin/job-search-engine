@@ -34,17 +34,25 @@ export async function ensureTablesExist() {
     );
   `;
 
+  await sql`DROP TABLE IF EXISTS job_applications`;
+
   await sql`
-    CREATE TABLE IF NOT EXISTS job_applications (
+    CREATE TABLE job_applications (
       id SERIAL PRIMARY KEY,
-      company_name VARCHAR(255) NOT NULL,
-      position_title VARCHAR(255) NOT NULL,
-      source_type VARCHAR(20) NOT NULL CHECK (source_type IN ('direct', 'recruiter')),
-      status VARCHAR(20) NOT NULL CHECK (status IN ('initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept')),
-      salary_range VARCHAR(100),
-      job_url VARCHAR(500),
+      company_name VARCHAR(255),
+      position_title VARCHAR(255),
+      status VARCHAR(20) CHECK (status IN ('initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept')),
+      remote VARCHAR(10) CHECK (remote IN ('yes', 'no', 'hybrid')),
+      applied BOOLEAN DEFAULT FALSE,
       notes TEXT,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      job_url VARCHAR(500),
+      job_description TEXT,
+      recruiter_name VARCHAR(255),
+      recruiting_agency VARCHAR(255),
+      recruiter_email VARCHAR(255),
+      recruiter_phone VARCHAR(50),
+      recruiter_linkedin VARCHAR(500),
+      date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `;

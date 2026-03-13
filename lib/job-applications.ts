@@ -4,28 +4,40 @@ export interface JobApplication {
   id: number;
   company_name: string;
   position_title: string;
-  source_type: 'direct' | 'recruiter';
   status: 'initiation' | 'phone_screen' | 'apply' | 'interviewing' | 'offer_accept';
-  salary_range: string | null;
-  job_url: string | null;
+  remote: 'yes' | 'no' | 'hybrid';
+  applied: boolean;
   notes: string | null;
-  created_at: Date;
+  job_url: string | null;
+  job_description: string | null;
+  recruiter_name: string | null;
+  recruiting_agency: string | null;
+  recruiter_email: string | null;
+  recruiter_phone: string | null;
+  recruiter_linkedin: string | null;
+  date_added: Date;
   updated_at: Date;
 }
 
 export interface CreateJobApplicationInput {
   company_name: string;
   position_title: string;
-  source_type: 'direct' | 'recruiter';
   status: 'initiation' | 'phone_screen' | 'apply' | 'interviewing' | 'offer_accept';
-  salary_range?: string;
-  job_url?: string;
+  remote: 'yes' | 'no' | 'hybrid';
+  applied?: boolean;
   notes?: string;
+  job_url?: string;
+  job_description?: string;
+  recruiter_name?: string;
+  recruiting_agency?: string;
+  recruiter_email?: string;
+  recruiter_phone?: string;
+  recruiter_linkedin?: string;
 }
 
 export async function getAllJobApplications(): Promise<JobApplication[]> {
   const result = await sql`
-    SELECT * FROM job_applications ORDER BY updated_at DESC
+    SELECT * FROM job_applications ORDER BY date_added DESC
   `;
   return result as unknown as JobApplication[];
 }
@@ -42,19 +54,31 @@ export async function createJobApplication(input: CreateJobApplicationInput): Pr
     INSERT INTO job_applications (
       company_name,
       position_title,
-      source_type,
       status,
-      salary_range,
+      remote,
+      applied,
+      notes,
       job_url,
-      notes
+      job_description,
+      recruiter_name,
+      recruiting_agency,
+      recruiter_email,
+      recruiter_phone,
+      recruiter_linkedin
     ) VALUES (
-      ${input.company_name},
-      ${input.position_title},
-      ${input.source_type},
-      ${input.status},
-      ${input.salary_range || null},
+      ${input.company_name || null},
+      ${input.position_title || null},
+      ${input.status || 'initiation'},
+      ${input.remote || null},
+      ${input.applied ?? false},
+      ${input.notes || null},
       ${input.job_url || null},
-      ${input.notes || null}
+      ${input.job_description || null},
+      ${input.recruiter_name || null},
+      ${input.recruiting_agency || null},
+      ${input.recruiter_email || null},
+      ${input.recruiter_phone || null},
+      ${input.recruiter_linkedin || null}
     )
     RETURNING *
   `;
@@ -70,13 +94,19 @@ export async function updateJobApplication(
 
   const updated = await sql`
     UPDATE job_applications SET
-      company_name = ${input.company_name ?? existing.company_name},
-      position_title = ${input.position_title ?? existing.position_title},
-      source_type = ${input.source_type ?? existing.source_type},
+      company_name = ${input.company_name !== undefined ? (input.company_name || null) : existing.company_name},
+      position_title = ${input.position_title !== undefined ? (input.position_title || null) : existing.position_title},
       status = ${input.status ?? existing.status},
-      salary_range = ${input.salary_range ?? existing.salary_range},
-      job_url = ${input.job_url ?? existing.job_url},
-      notes = ${input.notes ?? existing.notes},
+      remote = ${input.remote !== undefined ? (input.remote || null) : existing.remote},
+      applied = ${input.applied !== undefined ? input.applied : existing.applied},
+      notes = ${input.notes !== undefined ? (input.notes || null) : existing.notes},
+      job_url = ${input.job_url !== undefined ? (input.job_url || null) : existing.job_url},
+      job_description = ${input.job_description !== undefined ? (input.job_description || null) : existing.job_description},
+      recruiter_name = ${input.recruiter_name !== undefined ? (input.recruiter_name || null) : existing.recruiter_name},
+      recruiting_agency = ${input.recruiting_agency !== undefined ? (input.recruiting_agency || null) : existing.recruiting_agency},
+      recruiter_email = ${input.recruiter_email !== undefined ? (input.recruiter_email || null) : existing.recruiter_email},
+      recruiter_phone = ${input.recruiter_phone !== undefined ? (input.recruiter_phone || null) : existing.recruiter_phone},
+      recruiter_linkedin = ${input.recruiter_linkedin !== undefined ? (input.recruiter_linkedin || null) : existing.recruiter_linkedin},
       updated_at = CURRENT_TIMESTAMP
     WHERE id = ${id}
     RETURNING *
@@ -99,7 +129,7 @@ export async function updateJobApplicationStatus(
 }
 
 export async function deleteJobApplication(id: number): Promise<boolean> {
-  const result = await sql`
+  await sql`
     DELETE FROM job_applications WHERE id = ${id}
   `;
   return true;
