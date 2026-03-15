@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAllDataEntries, createDataEntry } from '@/lib/data';
-import { ensureSeeded } from '@/lib/init-db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    await ensureSeeded();
-    const entries = await getAllDataEntries();
+    const entries = await prisma.dataEntry.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
     return NextResponse.json(entries);
   } catch (error) {
     console.error('Error fetching data entries:', error);
@@ -15,15 +15,21 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await ensureSeeded();
     const body = await request.json();
-    const { name, company_info, url, industry } = body;
+    const { name, companyInfo, url, industry } = body;
 
-    if (!name || !company_info || !url || !industry) {
+    if (!name || !companyInfo || !url || !industry) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const newEntry = await createDataEntry({ name, company_info, url, industry });
+    const newEntry = await prisma.dataEntry.create({
+      data: {
+        name,
+        companyInfo,
+        url,
+        industry,
+      },
+    });
     return NextResponse.json(newEntry, { status: 201 });
   } catch (error) {
     console.error('Error creating data entry:', error);
