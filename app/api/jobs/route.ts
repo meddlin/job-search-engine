@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { getAllJobApplications, createJobApplication } from '@/lib/job-applications';
-import { ensureTablesExist } from '@/lib/init-db';
+import { prisma } from '@/lib/prisma';
 
 export async function GET() {
   try {
-    await ensureTablesExist();
-    const jobs = await getAllJobApplications();
+    const jobs = await prisma.jobApplication.findMany({
+      orderBy: { dateAdded: 'desc' },
+    });
     return NextResponse.json(jobs);
   } catch (error) {
     console.error('Error fetching job applications:', error);
@@ -15,27 +15,22 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    await ensureTablesExist();
     const body = await request.json();
     const {
-      company_name,
-      position_title,
+      companyName,
+      positionTitle,
       status,
       remote,
       applied,
       notes,
-      job_url,
-      job_description,
-      recruiter_name,
-      recruiting_agency,
-      recruiter_email,
-      recruiter_phone,
-      recruiter_linkedin,
+      jobUrl,
+      jobDescription,
+      recruiterName,
+      recruitingAgency,
+      recruiterEmail,
+      recruiterPhone,
+      recruiterLinkedin,
     } = body;
-
-    if (!status) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
 
     if (status && !['initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
@@ -45,20 +40,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid remote value' }, { status: 400 });
     }
 
-    const newJob = await createJobApplication({
-      company_name,
-      position_title,
-      status,
-      remote,
-      applied,
-      notes,
-      job_url,
-      job_description,
-      recruiter_name,
-      recruiting_agency,
-      recruiter_email,
-      recruiter_phone,
-      recruiter_linkedin,
+    const newJob = await prisma.jobApplication.create({
+      data: {
+        companyName,
+        positionTitle,
+        status: status || 'initiation',
+        remote,
+        applied: applied || false,
+        notes,
+        jobUrl,
+        jobDescription,
+        recruiterName,
+        recruitingAgency,
+        recruiterEmail,
+        recruiterPhone,
+        recruiterLinkedin,
+      },
     });
     return NextResponse.json(newJob, { status: 201 });
   } catch (error) {

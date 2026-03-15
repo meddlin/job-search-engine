@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getPersonById, updatePerson, deletePerson } from '@/lib/people';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
@@ -13,7 +13,9 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    const person = await getPersonById(personId);
+    const person = await prisma.person.findUnique({
+      where: { id: personId },
+    });
     
     if (!person) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
@@ -39,25 +41,32 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { first_name, last_name, email, phone, company, notes } = body;
+    const { firstName, lastName, email, phone, company, notes } = body;
 
-    if (!first_name || !last_name || !email || !phone || !company) {
+    if (!firstName || !lastName || !email || !phone || !company) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const updatedPerson = await updatePerson(personId, { 
-      first_name, 
-      last_name, 
-      email, 
-      phone, 
-      company, 
-      notes: notes || '' 
+    const existing = await prisma.person.findUnique({
+      where: { id: personId },
     });
-    
-    if (!updatedPerson) {
+
+    if (!existing) {
       return NextResponse.json({ error: 'Person not found' }, { status: 404 });
     }
 
+    const updatedPerson = await prisma.person.update({
+      where: { id: personId },
+      data: {
+        firstName: firstName ?? existing.firstName,
+        lastName: lastName ?? existing.lastName,
+        email: email ?? existing.email,
+        phone: phone ?? existing.phone,
+        company: company ?? existing.company,
+        notes: notes ?? existing.notes,
+      },
+    });
+    
     return NextResponse.json(updatedPerson);
   } catch (error) {
     console.error('Error updating person:', error);
@@ -77,7 +86,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    await deletePerson(personId);
+    await prisma.person.delete({
+      where: { id: personId },
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting person:', error);

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDataEntryById, updateDataEntry, deleteDataEntry } from '@/lib/data';
+import { prisma } from '@/lib/prisma';
 
 export async function GET(
   request: Request,
@@ -13,7 +13,9 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    const entry = await getDataEntryById(entryId);
+    const entry = await prisma.dataEntry.findUnique({
+      where: { id: entryId },
+    });
     
     if (!entry) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
@@ -39,18 +41,30 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { name, company_info, url, industry } = body;
+    const { name, companyInfo, url, industry } = body;
 
-    if (!name || !company_info || !url || !industry) {
+    if (!name || !companyInfo || !url || !industry) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const updatedEntry = await updateDataEntry(entryId, { name, company_info, url, industry });
-    
-    if (!updatedEntry) {
+    const existing = await prisma.dataEntry.findUnique({
+      where: { id: entryId },
+    });
+
+    if (!existing) {
       return NextResponse.json({ error: 'Entry not found' }, { status: 404 });
     }
 
+    const updatedEntry = await prisma.dataEntry.update({
+      where: { id: entryId },
+      data: {
+        name: name ?? existing.name,
+        companyInfo: companyInfo ?? existing.companyInfo,
+        url: url ?? existing.url,
+        industry: industry ?? existing.industry,
+      },
+    });
+    
     return NextResponse.json(updatedEntry);
   } catch (error) {
     console.error('Error updating data entry:', error);
@@ -70,7 +84,9 @@ export async function DELETE(
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    await deleteDataEntry(entryId);
+    await prisma.dataEntry.delete({
+      where: { id: entryId },
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting data entry:', error);

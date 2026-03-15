@@ -5,25 +5,25 @@ import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea
 
 interface JobApplication {
   id: number;
-  company_name: string;
-  position_title: string;
-  status: 'initiation' | 'phone_screen' | 'apply' | 'interviewing' | 'offer_accept';
-  remote: 'yes' | 'no' | 'hybrid';
-  applied: boolean;
+  companyName: string | null;
+  positionTitle: string | null;
+  status: string | null;
+  remote: string | null;
+  applied: boolean | null;
   notes: string | null;
-  job_url: string | null;
-  job_description: string | null;
-  recruiter_name: string | null;
-  recruiting_agency: string | null;
-  recruiter_email: string | null;
-  recruiter_phone: string | null;
-  recruiter_linkedin: string | null;
-  date_added: string;
-  updated_at: string;
+  jobUrl: string | null;
+  jobDescription: string | null;
+  recruiterName: string | null;
+  recruitingAgency: string | null;
+  recruiterEmail: string | null;
+  recruiterPhone: string | null;
+  recruiterLinkedin: string | null;
+  dateAdded: Date | string;
+  updatedAt: Date | string;
 }
 
-type StatusType = JobApplication['status'];
-type RemoteType = JobApplication['remote'];
+type StatusType = string;
+type RemoteType = string;
 
 const COLUMNS: { id: StatusType; label: string }[] = [
   { id: 'initiation', label: 'Initiation' },
@@ -39,18 +39,18 @@ export default function KanbanBoard() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<JobApplication | null>(null);
   const [formData, setFormData] = useState({
-    company_name: '',
-    position_title: '',
+    companyName: '',
+    positionTitle: '',
     status: 'initiation' as StatusType,
     remote: '' as RemoteType,
     applied: false,
-    job_url: '',
-    job_description: '',
-    recruiter_name: '',
-    recruiting_agency: '',
-    recruiter_email: '',
-    recruiter_phone: '',
-    recruiter_linkedin: '',
+    jobUrl: '',
+    jobDescription: '',
+    recruiterName: '',
+    recruitingAgency: '',
+    recruiterEmail: '',
+    recruiterPhone: '',
+    recruiterLinkedin: '',
     notes: '',
   });
 
@@ -102,18 +102,18 @@ export default function KanbanBoard() {
   const handleAdd = () => {
     setEditingJob(null);
     setFormData({
-      company_name: '',
-      position_title: '',
+      companyName: '',
+      positionTitle: '',
       status: 'initiation',
-      remote: 'no',
+      remote: '',
       applied: false,
-      job_url: '',
-      job_description: '',
-      recruiter_name: '',
-      recruiting_agency: '',
-      recruiter_email: '',
-      recruiter_phone: '',
-      recruiter_linkedin: '',
+      jobUrl: '',
+      jobDescription: '',
+      recruiterName: '',
+      recruitingAgency: '',
+      recruiterEmail: '',
+      recruiterPhone: '',
+      recruiterLinkedin: '',
       notes: '',
     });
     setIsModalOpen(true);
@@ -122,18 +122,18 @@ export default function KanbanBoard() {
   const handleEdit = (job: JobApplication) => {
     setEditingJob(job);
     setFormData({
-      company_name: job.company_name,
-      position_title: job.position_title,
-      status: job.status,
-      remote: job.remote,
-      applied: job.applied,
-      job_url: job.job_url || '',
-      job_description: job.job_description || '',
-      recruiter_name: job.recruiter_name || '',
-      recruiting_agency: job.recruiting_agency || '',
-      recruiter_email: job.recruiter_email || '',
-      recruiter_phone: job.recruiter_phone || '',
-      recruiter_linkedin: job.recruiter_linkedin || '',
+      companyName: job.companyName || '',
+      positionTitle: job.positionTitle || '',
+      status: job.status || 'initiation',
+      remote: job.remote || '',
+      applied: job.applied || false,
+      jobUrl: job.jobUrl || '',
+      jobDescription: job.jobDescription || '',
+      recruiterName: job.recruiterName || '',
+      recruitingAgency: job.recruitingAgency || '',
+      recruiterEmail: job.recruiterEmail || '',
+      recruiterPhone: job.recruiterPhone || '',
+      recruiterLinkedin: job.recruiterLinkedin || '',
       notes: job.notes || '',
     });
     setIsModalOpen(true);
@@ -181,7 +181,7 @@ export default function KanbanBoard() {
 
   const getJobsByStatus = (status: StatusType) => jobs.filter((job) => job.status === status);
 
-  const getRemoteBadgeClass = (remote: RemoteType) => {
+  const getRemoteBadgeClass = (remote: string | null) => {
     switch (remote) {
       case 'yes':
         return 'bg-green-900/50 text-green-300';
@@ -252,7 +252,7 @@ export default function KanbanBoard() {
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex gap-1 flex-wrap">
                                   <span className={`text-xs px-2 py-1 rounded-full ${getRemoteBadgeClass(job.remote)}`}>
-                                    {job.remote === 'yes' ? 'Remote' : job.remote === 'no' ? 'On-site' : 'Hybrid'}
+                                    {job.remote === 'yes' ? 'Remote' : job.remote === 'no' ? 'On-site' : job.remote === 'hybrid' ? 'Hybrid' : 'Unknown'}
                                   </span>
                                   {job.applied && (
                                     <span className="text-xs px-2 py-1 rounded-full bg-blue-900/50 text-blue-300">
@@ -284,10 +284,10 @@ export default function KanbanBoard() {
                                   </button>
                                 </div>
                               </div>
-                              <h4 className="font-medium text-zinc-50 mb-1">{job.position_title}</h4>
-                              <p className="text-sm text-zinc-400 mb-1">{job.company_name}</p>
-                              {job.recruiter_name && (
-                                <p className="text-xs text-zinc-500">Recruiter: {job.recruiter_name}</p>
+                              <h4 className="font-medium text-zinc-50 mb-1">{job.positionTitle || 'Untitled Position'}</h4>
+                              <p className="text-sm text-zinc-400 mb-1">{job.companyName || 'Unknown Company'}</p>
+                              {job.recruiterName && (
+                                <p className="text-xs text-zinc-500">Recruiter: {job.recruiterName}</p>
                               )}
                             </div>
                           )}
@@ -315,8 +315,8 @@ export default function KanbanBoard() {
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Company Name</label>
                   <input
                     type="text"
-                    value={formData.company_name}
-                    onChange={(e) => setFormData({ ...formData, company_name: e.target.value })}
+                    value={formData.companyName}
+                    onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
                     className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                 </div>
@@ -324,8 +324,8 @@ export default function KanbanBoard() {
                   <label className="block text-sm font-medium text-zinc-400 mb-1">Position Title</label>
                   <input
                     type="text"
-                    value={formData.position_title}
-                    onChange={(e) => setFormData({ ...formData, position_title: e.target.value })}
+                    value={formData.positionTitle}
+                    onChange={(e) => setFormData({ ...formData, positionTitle: e.target.value })}
                     className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                   />
                 </div>
@@ -374,8 +374,8 @@ export default function KanbanBoard() {
                 <label className="block text-sm font-medium text-zinc-400 mb-1">Job URL</label>
                 <input
                   type="url"
-                  value={formData.job_url}
-                  onChange={(e) => setFormData({ ...formData, job_url: e.target.value })}
+                  value={formData.jobUrl}
+                  onChange={(e) => setFormData({ ...formData, jobUrl: e.target.value })}
                   placeholder="https://..."
                   className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                 />
@@ -384,8 +384,8 @@ export default function KanbanBoard() {
               <div>
                 <label className="block text-sm font-medium text-zinc-400 mb-1">Job Description</label>
                 <textarea
-                  value={formData.job_description}
-                  onChange={(e) => setFormData({ ...formData, job_description: e.target.value })}
+                  value={formData.jobDescription}
+                  onChange={(e) => setFormData({ ...formData, jobDescription: e.target.value })}
                   rows={4}
                   placeholder="Paste job description here..."
                   className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600 resize-none"
@@ -399,8 +399,8 @@ export default function KanbanBoard() {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Recruiter Name</label>
                     <input
                       type="text"
-                      value={formData.recruiter_name}
-                      onChange={(e) => setFormData({ ...formData, recruiter_name: e.target.value })}
+                      value={formData.recruiterName}
+                      onChange={(e) => setFormData({ ...formData, recruiterName: e.target.value })}
                       className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
@@ -408,8 +408,8 @@ export default function KanbanBoard() {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Recruiting Agency</label>
                     <input
                       type="text"
-                      value={formData.recruiting_agency}
-                      onChange={(e) => setFormData({ ...formData, recruiting_agency: e.target.value })}
+                      value={formData.recruitingAgency}
+                      onChange={(e) => setFormData({ ...formData, recruitingAgency: e.target.value })}
                       className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
@@ -417,8 +417,8 @@ export default function KanbanBoard() {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Recruiter Email</label>
                     <input
                       type="email"
-                      value={formData.recruiter_email}
-                      onChange={(e) => setFormData({ ...formData, recruiter_email: e.target.value })}
+                      value={formData.recruiterEmail}
+                      onChange={(e) => setFormData({ ...formData, recruiterEmail: e.target.value })}
                       className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
@@ -426,8 +426,8 @@ export default function KanbanBoard() {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Recruiter Phone</label>
                     <input
                       type="tel"
-                      value={formData.recruiter_phone}
-                      onChange={(e) => setFormData({ ...formData, recruiter_phone: e.target.value })}
+                      value={formData.recruiterPhone}
+                      onChange={(e) => setFormData({ ...formData, recruiterPhone: e.target.value })}
                       className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />
                   </div>
@@ -435,8 +435,8 @@ export default function KanbanBoard() {
                     <label className="block text-sm font-medium text-zinc-400 mb-1">Recruiter LinkedIn</label>
                     <input
                       type="url"
-                      value={formData.recruiter_linkedin}
-                      onChange={(e) => setFormData({ ...formData, recruiter_linkedin: e.target.value })}
+                      value={formData.recruiterLinkedin}
+                      onChange={(e) => setFormData({ ...formData, recruiterLinkedin: e.target.value })}
                       placeholder="https://linkedin.com/in/..."
                       className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
                     />

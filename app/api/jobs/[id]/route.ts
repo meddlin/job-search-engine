@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { updateJobApplication, deleteJobApplication, updateJobApplicationStatus } from '@/lib/job-applications';
+import { prisma } from '@/lib/prisma';
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -20,19 +20,34 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
       return NextResponse.json({ error: 'Invalid remote value' }, { status: 400 });
     }
 
-    if (body.status) {
-      const updated = await updateJobApplicationStatus(jobId, body.status);
-      if (!updated) {
-        return NextResponse.json({ error: 'Job application not found' }, { status: 404 });
-      }
-      return NextResponse.json(updated);
-    } else {
-      const updated = await updateJobApplication(jobId, body);
-      if (!updated) {
-        return NextResponse.json({ error: 'Job application not found' }, { status: 404 });
-      }
-      return NextResponse.json(updated);
+    const existing = await prisma.jobApplication.findUnique({
+      where: { id: jobId },
+    });
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Job application not found' }, { status: 404 });
     }
+
+    const updated = await prisma.jobApplication.update({
+      where: { id: jobId },
+      data: {
+        companyName: body.companyName ?? existing.companyName,
+        positionTitle: body.positionTitle ?? existing.positionTitle,
+        status: body.status ?? existing.status,
+        remote: body.remote ?? existing.remote,
+        applied: body.applied ?? existing.applied,
+        notes: body.notes ?? existing.notes,
+        jobUrl: body.jobUrl ?? existing.jobUrl,
+        jobDescription: body.jobDescription ?? existing.jobDescription,
+        recruiterName: body.recruiterName ?? existing.recruiterName,
+        recruitingAgency: body.recruitingAgency ?? existing.recruitingAgency,
+        recruiterEmail: body.recruiterEmail ?? existing.recruiterEmail,
+        recruiterPhone: body.recruiterPhone ?? existing.recruiterPhone,
+        recruiterLinkedin: body.recruiterLinkedin ?? existing.recruiterLinkedin,
+      },
+    });
+
+    return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating job application:', error);
     return NextResponse.json({ error: 'Failed to update job application' }, { status: 500 });
@@ -48,7 +63,9 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
       return NextResponse.json({ error: 'Invalid ID' }, { status: 400 });
     }
 
-    await deleteJobApplication(jobId);
+    await prisma.jobApplication.delete({
+      where: { id: jobId },
+    });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting job application:', error);
