@@ -4,6 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:web": "next dev",
+    "dev:services": "docker compose up -d postgres pgadmin",
+    "dev:services:logs": "docker compose logs -f postgres pgadmin",
+    "dev:services:stop": "docker compose stop postgres pgadmin",
+    "dev:services:reset": "docker compose down -v",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
