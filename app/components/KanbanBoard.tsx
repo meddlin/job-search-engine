@@ -221,7 +221,7 @@ export default function KanbanBoard() {
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto pb-4">
           {COLUMNS.map((column) => (
-            <div key={column.id} className="flex-shrink-0 w-72">
+            <div key={column.id} className="min-w-72 flex-1">
               <div className="bg-zinc-900 rounded-lg p-3">
                 <h3 className="font-semibold text-zinc-50 mb-3 flex items-center justify-between">
                   {column.label}
