@@ -68,7 +68,7 @@ export default function KanbanBoard() {
   };
 
   useEffect(() => {
-    fetchJobs();
+    void Promise.resolve().then(fetchJobs);
   }, []);
 
   const handleDragEnd = async (result: DropResult) => {
