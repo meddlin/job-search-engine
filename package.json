@@ -18,7 +18,7 @@
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.5.0",
     "@tanstack/react-table": "^8.21.3",
-    "next": "16.1.6",
+    "next": "16.2.6",
     "pg": "^8.22.0",
     "postgres": "^3.4.8",
     "react": "19.2.3",
@@ -31,7 +31,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "prisma": "^7.5.0",
+    "prisma": "^7.8.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
