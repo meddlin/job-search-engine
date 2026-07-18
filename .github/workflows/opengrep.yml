@@ -1,0 +1,136 @@
+name: OpenGrep SAST
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  security-events: write
+
+jobs:
+  opengrep:
+    name: OpenGrep
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install OpenGrep
+        shell: bash
+        run: |
+          curl -fsSL --output opengrep-install.sh https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh
+          bash opengrep-install.sh -v v1.25.0
+          echo "$HOME/.opengrep/cli/latest" >> "$GITHUB_PATH"
+
+      - name: Run OpenGrep
+        id: opengrep
+        shell: bash
+        run: |
+          set +e
+          opengrep scan --config auto --error --sarif-output=opengrep.sarif --json-output=opengrep.json .
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload OpenGrep SARIF
+        if: always() && hashFiles('opengrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@eec0bff2f6c15bf3f1e8a0152f94d17664a06a06 # v4
+        with:
+          sarif_file: opengrep.sarif
+          category: opengrep
+
+      - name: Comment OpenGrep findings
+        if: >-
+          always() &&
+          steps.opengrep.outputs.exit_code != '0' &&
+          hashFiles('opengrep.json') != '' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const marker = '<!-- opengrep-sast-summary -->';
+          const data = JSON.parse(fs.readFileSync('opengrep.json', 'utf8'));
+          const results = Array.isArray(data.results) ? data.results : [];
+          const severityOrder = ['ERROR', 'WARNING', 'INFO'];
+          const counts = new Map();
+
+          for (const result of results) {
+            const severity = result.extra?.severity || 'UNKNOWN';
+            counts.set(severity, (counts.get(severity) || 0) + 1);
+          }
+
+          const orderedSeverities = [
+            ...severityOrder.filter((severity) => counts.has(severity)),
+            ...[...counts.keys()].filter((severity) => !severityOrder.includes(severity)).sort(),
+          ];
+          const severitySummary = orderedSeverities
+            .map((severity) => `${severity}: ${counts.get(severity)}`)
+            .join(', ') || 'none';
+
+          const escapeCell = (value) => String(value ?? '')
+            .replace(/\r?\n/g, ' ')
+            .replace(/\|/g, '\\|')
+            .trim();
+          const truncate = (value, maxLength) => {
+            const text = escapeCell(value).replace(/\s+/g, ' ');
+            return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
+          };
+
+          const displayedResults = results.slice(0, 25);
+          const rows = displayedResults.map((result) => {
+            const severity = result.extra?.severity || 'UNKNOWN';
+            const path = result.path || 'unknown';
+            const line = result.start?.line || '?';
+            const rule = result.check_id || 'unknown';
+            const message = result.extra?.message || 'No message provided.';
+            return `| ${escapeCell(severity)} | ${escapeCell(`${path}:${line}`)} | ${escapeCell(rule)} | ${truncate(message, 160)} |`;
+          });
+
+          const omitted = results.length > displayedResults.length
+            ? `\n\nShowing the first ${displayedResults.length} findings. ${results.length - displayedResults.length} additional finding(s) omitted from this comment.`
+            : '';
+          const plural = results.length === 1 ? '' : 's';
+
+          const body = [
+            marker,
+            '## OpenGrep SAST findings',
+            '',
+            `OpenGrep found **${results.length}** finding${plural}. This PR check is blocking because SAST findings are treated as failures.`,
+            '',
+            `Severity summary: ${severitySummary}`,
+            '',
+            `Workflow run: ${process.env.RUN_URL}`,
+            '',
+            '| Severity | Location | Rule | Message |',
+            '| --- | --- | --- | --- |',
+            ...rows,
+            omitted,
+          ].join('\n');
+
+          fs.writeFileSync('opengrep-comment.md', body);
+          NODE
+
+          comment_id="$(gh api "repos/${REPO}/issues/${PR_NUMBER}/comments" --paginate --jq '.[] | select(.user.type == "Bot" and (.body | contains("<!-- opengrep-sast-summary -->"))) | .id' | tail -n 1)"
+
+          if [ -n "$comment_id" ]; then
+            gh api --method PATCH "repos/${REPO}/issues/comments/${comment_id}" --field body="$(cat opengrep-comment.md)" >/dev/null
+          else
+            gh api --method POST "repos/${REPO}/issues/${PR_NUMBER}/comments" --field body="$(cat opengrep-comment.md)" >/dev/null
+          fi
+
+      - name: Fail on OpenGrep findings
+        if: steps.opengrep.outputs.exit_code != '0'
+        shell: bash
+        run: exit ${{ steps.opengrep.outputs.exit_code }}
