@@ -1,0 +1,49 @@
+name: OpenGrep SAST
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  opengrep:
+    name: OpenGrep
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+
+      - name: Install OpenGrep
+        shell: bash
+        run: |
+          curl -fsSL --output opengrep-install.sh https://raw.githubusercontent.com/opengrep/opengrep/main/install.sh
+          bash opengrep-install.sh -v v1.25.0
+          echo "$HOME/.opengrep/cli/latest" >> "$GITHUB_PATH"
+
+      - name: Run OpenGrep
+        id: opengrep
+        shell: bash
+        run: |
+          set +e
+          opengrep scan --config auto --error --sarif-output=opengrep.sarif .
+          status=$?
+          echo "exit_code=$status" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Upload OpenGrep SARIF
+        if: always() && hashFiles('opengrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@eec0bff2f6c15bf3f1e8a0152f94d17664a06a06 # v4
+        with:
+          sarif_file: opengrep.sarif
+          category: opengrep
+
+      - name: Fail on OpenGrep findings
+        if: steps.opengrep.outputs.exit_code != '0'
+        shell: bash
+        run: exit ${{ steps.opengrep.outputs.exit_code }}

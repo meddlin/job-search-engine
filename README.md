@@ -7,6 +7,7 @@ and people.
 
 - [Docker](https://www.docker.com/get-started) (with Docker Compose)
 - [Node.js](https://nodejs.org/) 18+ (for local development)
+- [OpenGrep](https://github.com/opengrep/opengrep) (for local SAST scans)
 
 ## Quick Start
 
@@ -108,6 +109,18 @@ npm run dev:services:stop
 # Stop all Compose services and remove database/admin volumes
 npm run dev:services:reset
 ```
+
+### Security Scanning
+
+Run OpenGrep SAST locally:
+
+```bash
+npm run sast
+```
+
+The scan uses OpenGrep's `--config auto` rules and fails when findings are present. OpenGrep selects
+supported files from the repository, including TypeScript, TSX, Dockerfile, YAML, and other supported
+files that are not excluded by `.gitignore`.
 
 ---
 

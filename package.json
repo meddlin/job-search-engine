@@ -11,7 +11,8 @@
     "dev:services:reset": "docker compose down -v",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sast": "opengrep scan --config auto --error ."
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",
