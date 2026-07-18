@@ -110,6 +110,24 @@ npm run dev:services:stop
 npm run dev:services:reset
 ```
 
+### Unit Testing
+
+Run the unit tests locally without starting PostgreSQL:
+
+```bash
+# Run unit tests once
+npm test
+
+# Run unit tests in watch mode
+npm run test:watch
+
+# Run unit tests with coverage
+npm run test:coverage
+
+# Run the same command used by CI
+npm run test:ci
+```
+
 ### Security Scanning
 
 Run OpenGrep SAST locally:
