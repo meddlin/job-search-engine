@@ -128,6 +128,42 @@ npm run test:coverage
 npm run test:ci
 ```
 
+### OSINT Company Scans
+
+The Data page can run manual company reconnaissance scans with
+[theHarvester](https://github.com/laramies/theHarvester). Scans are started from
+`http://localhost:3000/data`, executed locally through Docker, exported to
+`.osint/theharvester/`, and ingested into PostgreSQL.
+
+Before using OSINT scans, apply the Prisma schema to the local database:
+
+```bash
+npx prisma db push
+```
+
+Run a scan from the UI, or run the local worker directly:
+
+```bash
+npm run osint:scan -- --company "Acme Corp" --domain acme.com --sources crtsh,hackertarget --limit 100
+```
+
+Optional environment variables:
+
+```env
+THEHARVESTER_IMAGE=ghcr.io/laramies/theharvester:latest
+THEHARVESTER_SCAN_TIMEOUT_MS=900000
+```
+
+Optional API key and proxy files can be placed at:
+
+```text
+.osint/theharvester/config/api-keys.yaml
+.osint/theharvester/config/proxies.yaml
+```
+
+The default source list avoids API-key-only providers. Scans are manual only; no
+scheduled or automated scan runner is configured.
+
 ### Security Scanning
 
 Run OpenGrep SAST locally:

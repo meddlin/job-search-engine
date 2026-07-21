@@ -39,6 +39,67 @@ model DataEntry {
   @@map("data_entries")
 }
 
+enum OsintScanStatus {
+  queued
+  running
+  completed
+  failed
+}
+
+enum OsintScanProgressStage {
+  queued
+  harvesting
+  ingesting
+  completed
+  failed
+}
+
+model CompanyOsintScan {
+  id              Int                    @id @default(autoincrement())
+  companyName     String                 @map("company_name") @db.VarChar(255)
+  domain          String                 @db.VarChar(255)
+  sources         String[]               @default([])
+  limit           Int                    @default(100)
+  status          OsintScanStatus        @default(queued)
+  progressStage   OsintScanProgressStage @default(queued) @map("progress_stage")
+  heartbeatAt     DateTime?              @map("heartbeat_at") @db.Timestamp(6)
+  startedAt       DateTime?              @map("started_at") @db.Timestamp(6)
+  completedAt     DateTime?              @map("completed_at") @db.Timestamp(6)
+  outputDirectory String?                @map("output_directory") @db.VarChar(1000)
+  outputJsonPath  String?                @map("output_json_path") @db.VarChar(1000)
+  outputXmlPath   String?                @map("output_xml_path") @db.VarChar(1000)
+  hostCount       Int                    @default(0) @map("host_count")
+  emailCount      Int                    @default(0) @map("email_count")
+  ipCount         Int                    @default(0) @map("ip_count")
+  urlCount        Int                    @default(0) @map("url_count")
+  personCount     Int                    @default(0) @map("person_count")
+  errorMessage    String?                @map("error_message") @db.Text
+  rawResult       Json?                  @map("raw_result")
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamp(6)
+  findings        CompanyOsintFinding[]
+
+  @@index([domain])
+  @@index([status])
+  @@map("company_osint_scans")
+}
+
+model CompanyOsintFinding {
+  id        Int              @id @default(autoincrement())
+  scanId    Int              @map("scan_id")
+  scan      CompanyOsintScan @relation(fields: [scanId], references: [id], onDelete: Cascade)
+  type      String           @db.VarChar(50)
+  value     String           @db.VarChar(1000)
+  source    String?          @db.VarChar(255)
+  metadata  Json?
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@unique([scanId, type, value])
+  @@index([type])
+  @@index([value])
+  @@map("company_osint_findings")
+}
+
 model Person {
   id        Int      @id @default(autoincrement())
   firstName String   @map("first_name") @db.VarChar(255)

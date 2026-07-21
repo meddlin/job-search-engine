@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:ci": "vitest run",
+    "osint:scan": "node scripts/run-theharvester-scan.mjs",
     "sast": "opengrep scan --config auto --error ."
   },
   "dependencies": {
