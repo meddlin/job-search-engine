@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/.osint
 
 # next.js
 /.next/
