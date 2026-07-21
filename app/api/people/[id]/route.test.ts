@@ -27,6 +27,8 @@ describe("/api/people/[id]", () => {
     phone: "555-0100",
     company: "Acme",
     notes: "Met at event",
+    isRecruiter: false,
+    linkedinUrl: null,
   };
 
   beforeEach(() => {
@@ -62,7 +64,12 @@ describe("/api/people/[id]", () => {
 
   it("updates an existing person", async () => {
     prismaMock.person.findUnique.mockResolvedValue(person);
-    prismaMock.person.update.mockResolvedValue({ ...person, company: "Beta" });
+    prismaMock.person.update.mockResolvedValue({
+      ...person,
+      company: null,
+      isRecruiter: true,
+      linkedinUrl: "https://www.linkedin.com/in/jane-doe",
+    });
 
     const response = await PUT(
       new Request("http://localhost/api/people/1", {
@@ -70,26 +77,29 @@ describe("/api/people/[id]", () => {
         body: JSON.stringify({
           firstName: person.firstName,
           lastName: person.lastName,
-          email: person.email,
-          phone: person.phone,
-          company: "Beta",
-          notes: person.notes,
+          company: " ",
+          isRecruiter: true,
+          linkedinUrl: "www.linkedin.com/in/jane-doe",
         }),
       }),
       context("1"),
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ...person, company: "Beta" });
+    await expect(response.json()).resolves.toEqual({
+      ...person,
+      company: null,
+      isRecruiter: true,
+      linkedinUrl: "https://www.linkedin.com/in/jane-doe",
+    });
     expect(prismaMock.person.update).toHaveBeenCalledWith({
       where: { id: 1 },
       data: {
         firstName: person.firstName,
         lastName: person.lastName,
-        email: person.email,
-        phone: person.phone,
-        company: "Beta",
-        notes: person.notes,
+        company: null,
+        isRecruiter: true,
+        linkedinUrl: "https://www.linkedin.com/in/jane-doe",
       },
     });
   });
@@ -104,8 +114,27 @@ describe("/api/people/[id]", () => {
     );
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "Missing required fields" });
+    await expect(response.json()).resolves.toEqual({ error: "Last name is required." });
     expect(prismaMock.person.update).not.toHaveBeenCalled();
+  });
+
+  it("preserves optional fields omitted from an update", async () => {
+    prismaMock.person.findUnique.mockResolvedValue(person);
+    prismaMock.person.update.mockResolvedValue({ ...person, firstName: "Janet" });
+
+    const response = await PUT(
+      new Request("http://localhost/api/people/1", {
+        method: "PUT",
+        body: JSON.stringify({ firstName: " Janet ", lastName: person.lastName }),
+      }),
+      context("1"),
+    );
+
+    expect(response.status).toBe(200);
+    expect(prismaMock.person.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { firstName: "Janet", lastName: person.lastName },
+    });
   });
 
   it("deletes a person", async () => {

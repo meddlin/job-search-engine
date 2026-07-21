@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { parsePersonCreateInput, PersonInputError } from '@/lib/people';
 
 export async function GET() {
   try {
@@ -16,24 +17,17 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { firstName, lastName, email, phone, company, notes } = body;
-
-    if (!firstName || !lastName || !email || !phone || !company) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const data = parsePersonCreateInput(body);
 
     const newPerson = await prisma.person.create({
-      data: {
-        firstName,
-        lastName,
-        email,
-        phone,
-        company,
-        notes,
-      },
+      data,
     });
     return NextResponse.json(newPerson, { status: 201 });
   } catch (error) {
+    if (error instanceof PersonInputError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     console.error('Error creating person:', error);
     return NextResponse.json({ error: 'Failed to create person' }, { status: 500 });
   }

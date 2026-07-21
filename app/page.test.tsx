@@ -54,6 +54,7 @@ const summary: DashboardSummary = {
       company: "Talent Co",
       email: "sam@example.com",
       phone: null,
+      linkedinUrl: null,
       source: "application",
     },
     {
@@ -62,6 +63,7 @@ const summary: DashboardSummary = {
       company: "Search Partners",
       email: "priya@example.com",
       phone: null,
+      linkedinUrl: null,
       source: "contact",
     },
   ],

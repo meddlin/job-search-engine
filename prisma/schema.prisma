@@ -101,15 +101,17 @@ model CompanyOsintFinding {
 }
 
 model Person {
-  id        Int      @id @default(autoincrement())
-  firstName String   @map("first_name") @db.VarChar(255)
-  lastName  String   @map("last_name") @db.VarChar(255)
-  email     String   @db.VarChar(255)
-  phone     String   @db.VarChar(50)
-  company   String   @db.VarChar(255)
-  notes     String?  @db.Text
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
+  id           Int      @id @default(autoincrement())
+  firstName    String   @map("first_name") @db.VarChar(255)
+  lastName     String   @map("last_name") @db.VarChar(255)
+  email        String?  @db.VarChar(255)
+  phone        String?  @db.VarChar(50)
+  company      String?  @db.VarChar(255)
+  notes        String?  @db.Text
+  isRecruiter  Boolean  @default(false) @map("is_recruiter")
+  linkedinUrl  String?  @map("linkedin_url") @db.VarChar(500)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamp(6)
 
   @@map("people")
 }
