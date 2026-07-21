@@ -30,10 +30,12 @@ export type DashboardPerson = {
   id: number;
   firstName: string;
   lastName: string;
-  email: string;
-  phone: string;
-  company: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
   notes: string | null;
+  isRecruiter: boolean;
+  linkedinUrl: string | null;
 };
 
 export type DashboardDataEntry = {
@@ -57,6 +59,7 @@ export type RecruiterContact = {
   company: string;
   email: string | null;
   phone: string | null;
+  linkedinUrl: string | null;
   source: "application" | "contact";
 };
 
@@ -155,23 +158,37 @@ export function getRecruiterContacts(
       company,
       email,
       phone: clean(job.recruiterPhone),
+      linkedinUrl: clean(job.recruiterLinkedin),
       source: "application",
     });
   }
 
   for (const person of people) {
+    if (!person.isRecruiter) {
+      continue;
+    }
+
     const name = `${person.firstName} ${person.lastName}`.trim();
     const company = clean(person.company) || "Saved contact";
     const email = clean(person.email);
     const key = contactKey(name, email, company);
+    const existing = contacts.get(key);
 
-    if (!contacts.has(key)) {
+    if (existing) {
+      contacts.set(key, {
+        ...existing,
+        email: existing.email || email,
+        phone: existing.phone || clean(person.phone),
+        linkedinUrl: existing.linkedinUrl || clean(person.linkedinUrl),
+      });
+    } else {
       contacts.set(key, {
         id: key,
         name,
         company,
         email,
         phone: clean(person.phone),
+        linkedinUrl: clean(person.linkedinUrl),
         source: "contact",
       });
     }

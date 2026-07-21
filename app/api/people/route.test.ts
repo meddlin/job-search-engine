@@ -24,6 +24,8 @@ describe("/api/people", () => {
     phone: "555-0100",
     company: "Acme",
     notes: "Met at event",
+    isRecruiter: true,
+    linkedinUrl: "https://www.linkedin.com/in/jane-doe",
   };
 
   beforeEach(() => {
@@ -52,7 +54,7 @@ describe("/api/people", () => {
     await expect(response.json()).resolves.toEqual({ error: "Failed to fetch people" });
   });
 
-  it("creates a person when all required fields are present", async () => {
+  it("creates a recruiter with only names and normalized optional fields", async () => {
     prismaMock.person.create.mockResolvedValue(person);
 
     const response = await POST(
@@ -61,10 +63,8 @@ describe("/api/people", () => {
         body: JSON.stringify({
           firstName: person.firstName,
           lastName: person.lastName,
-          email: person.email,
-          phone: person.phone,
-          company: person.company,
-          notes: person.notes,
+          isRecruiter: true,
+          linkedinUrl: "linkedin.com/in/jane-doe",
         }),
       }),
     );
@@ -75,10 +75,12 @@ describe("/api/people", () => {
       data: {
         firstName: person.firstName,
         lastName: person.lastName,
-        email: person.email,
-        phone: person.phone,
-        company: person.company,
-        notes: person.notes,
+        email: null,
+        phone: null,
+        company: null,
+        notes: null,
+        isRecruiter: true,
+        linkedinUrl: "https://linkedin.com/in/jane-doe",
       },
     });
   });
@@ -92,7 +94,26 @@ describe("/api/people", () => {
     );
 
     expect(response.status).toBe(400);
-    await expect(response.json()).resolves.toEqual({ error: "Missing required fields" });
+    await expect(response.json()).resolves.toEqual({ error: "Last name is required." });
+    expect(prismaMock.person.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-LinkedIn profile URLs", async () => {
+    const response = await POST(
+      new Request("http://localhost/api/people", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName: "Jane",
+          lastName: "Doe",
+          linkedinUrl: "https://example.com/in/jane-doe",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({
+      error: "Enter a LinkedIn profile URL on linkedin.com.",
+    });
     expect(prismaMock.person.create).not.toHaveBeenCalled();
   });
 });

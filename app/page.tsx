@@ -105,7 +105,7 @@ export function HomeDashboard({ summary }: { summary: DashboardSummary }) {
     {
       label: "Recruiters",
       value: summary.metrics.recruiters,
-      description: "Application and people contacts",
+      description: "Application and flagged people contacts",
       icon: Users,
     },
     {
@@ -406,9 +406,23 @@ function RecruiterCard({ recruiters }: { recruiters: RecruiterContact[] }) {
                   <p className="mt-1 truncate text-sm text-muted-foreground">
                     {recruiter.company}
                   </p>
-                  <p className="mt-1 truncate text-xs text-muted-foreground">
-                    {recruiter.email || recruiter.phone || "No direct contact"}
-                  </p>
+                  {recruiter.email || recruiter.phone ? (
+                    <p className="mt-1 truncate text-xs text-muted-foreground">
+                      {recruiter.email || recruiter.phone}
+                    </p>
+                  ) : recruiter.linkedinUrl ? (
+                    <a
+                      className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground"
+                      href={recruiter.linkedinUrl}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      LinkedIn profile
+                      <ArrowUpRight data-icon="inline-end" />
+                    </a>
+                  ) : (
+                    <p className="mt-1 text-xs text-muted-foreground">No direct contact</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -417,7 +431,7 @@ function RecruiterCard({ recruiters }: { recruiters: RecruiterContact[] }) {
           <EmptyPanel
             icon={Users}
             title="No recruiters yet"
-            description="Add recruiter details to a job or save people contacts to see coverage here."
+            description="Add recruiter details to a job or flag a saved person as a recruiter."
             href="/people"
             action="Open people"
           />

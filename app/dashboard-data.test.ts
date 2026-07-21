@@ -73,6 +73,8 @@ const people: DashboardPerson[] = [
     phone: "555-0101",
     company: "Talent Co",
     notes: null,
+    isRecruiter: true,
+    linkedinUrl: "https://www.linkedin.com/in/sam-recruiter",
   },
   {
     id: 2,
@@ -82,6 +84,8 @@ const people: DashboardPerson[] = [
     phone: "555-0102",
     company: "Search Partners",
     notes: null,
+    isRecruiter: true,
+    linkedinUrl: null,
   },
 ];
 
@@ -133,6 +137,39 @@ describe("dashboard data", () => {
       "priya@example.com",
       "sam@example.com",
     ]);
+    expect(recruiters.find((recruiter) => recruiter.name === "Sam Recruiter")?.linkedinUrl).toBe(
+      "https://www.linkedin.com/in/sam-recruiter",
+    );
+  });
+
+  it("excludes unflagged people from recruiter contacts", () => {
+    const recruiters = getRecruiterContacts(jobs, [
+      people[0],
+      { ...people[1], isRecruiter: false },
+    ]);
+
+    expect(recruiters.map((recruiter) => recruiter.name)).not.toContain("Priya Sourcer");
+    expect(recruiters).toHaveLength(2);
+  });
+
+  it("keeps LinkedIn-only flagged people as recruiter contacts", () => {
+    const recruiters = getRecruiterContacts([], [{
+      ...people[1],
+      email: null,
+      phone: null,
+      company: null,
+      linkedinUrl: "https://www.linkedin.com/in/priya-sourcer",
+    }]);
+
+    expect(recruiters).toEqual([{
+      id: "priya sourcer:saved contact",
+      name: "Priya Sourcer",
+      company: "Saved contact",
+      email: null,
+      phone: null,
+      linkedinUrl: "https://www.linkedin.com/in/priya-sourcer",
+      source: "contact",
+    }]);
   });
 
   it("formats known and unknown job labels", () => {

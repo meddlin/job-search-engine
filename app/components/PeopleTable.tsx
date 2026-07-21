@@ -1,435 +1,510 @@
-'use client';
+"use client";
 
-import { useState, useMemo, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  useReactTable,
+  type ColumnDef,
+  type SortingState,
+  flexRender,
   getCoreRowModel,
   getFilteredRowModel,
   getPaginationRowModel,
   getSortedRowModel,
-  flexRender,
-  ColumnDef,
-  SortingState,
-} from '@tanstack/react-table';
+  useReactTable,
+} from "@tanstack/react-table";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsUpDown,
+  ExternalLink,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
+
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Field,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Textarea } from "@/components/ui/textarea";
 
 interface Person {
   id: number;
-  first_name: string;
-  last_name: string;
+  firstName: string;
+  lastName: string;
+  email: string | null;
+  phone: string | null;
+  company: string | null;
+  notes: string | null;
+  isRecruiter: boolean;
+  linkedinUrl: string | null;
+}
+
+type PersonFormData = {
+  firstName: string;
+  lastName: string;
   email: string;
   phone: string;
   company: string;
   notes: string;
-}
+  isRecruiter: boolean;
+  linkedinUrl: string;
+};
+
+const EMPTY_FORM: PersonFormData = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  company: "",
+  notes: "",
+  isRecruiter: false,
+  linkedinUrl: "",
+};
 
 export default function PeopleTable() {
   const [data, setData] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<Person | null>(null);
-  const [formData, setFormData] = useState<Omit<Person, 'id'>>({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    company: '',
-    notes: '',
-  });
+  const [formData, setFormData] = useState<PersonFormData>(EMPTY_FORM);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/people');
-      if (!response.ok) throw new Error('Failed to fetch data');
-      const result = await response.json();
-      setData(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(null);
+      const response = await fetch("/api/people");
+      if (!response.ok) throw new Error("Failed to load people.");
+      setData((await response.json()) as Person[]);
+    } catch (caughtError) {
+      setError(caughtError instanceof Error ? caughtError.message : "Failed to load people.");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
+    void fetchData();
+  }, [fetchData]);
+
+  const handleAdd = useCallback(() => {
+    setEditingEntry(null);
+    setFormData(EMPTY_FORM);
+    setFormError(null);
+    setIsDialogOpen(true);
+  }, []);
+
+  const handleEdit = useCallback((entry: Person) => {
+    setEditingEntry(entry);
+    setFormData({
+      firstName: entry.firstName,
+      lastName: entry.lastName,
+      email: entry.email ?? "",
+      phone: entry.phone ?? "",
+      company: entry.company ?? "",
+      notes: entry.notes ?? "",
+      isRecruiter: entry.isRecruiter,
+      linkedinUrl: entry.linkedinUrl ?? "",
+    });
+    setFormError(null);
+    setIsDialogOpen(true);
+  }, []);
+
+  const handleDelete = useCallback(async (id: number) => {
+    if (!window.confirm("Are you sure you want to delete this person?")) return;
+
+    try {
+      const response = await fetch(`/api/people/${id}`, { method: "DELETE" });
+      if (!response.ok) throw new Error("Failed to delete person.");
+      setData((current) => current.filter((item) => item.id !== id));
+    } catch {
+      window.alert("Failed to delete person.");
+    }
   }, []);
 
   const columns = useMemo<ColumnDef<Person>[]>(
     () => [
       {
-        accessorKey: 'first_name',
-        header: 'First Name',
-        cell: (info) => (
-          <span className="font-medium text-zinc-50">{info.getValue() as string}</span>
+        id: "name",
+        accessorFn: (person) => `${person.firstName} ${person.lastName}`,
+        header: ({ column }) => <SortableHeader label="Name" column={column} />,
+        cell: ({ row }) => (
+          <div className="flex min-w-44 items-center gap-2">
+            <span className="font-medium">{row.original.firstName} {row.original.lastName}</span>
+            {row.original.isRecruiter ? <Badge variant="secondary">Recruiter</Badge> : null}
+          </div>
         ),
       },
       {
-        accessorKey: 'last_name',
-        header: 'Last Name',
-        cell: (info) => (
-          <span className="font-medium text-zinc-50">{info.getValue() as string}</span>
-        ),
-      },
-      {
-        accessorKey: 'email',
-        header: 'Email',
-        cell: (info) => (
-          <a
-            href={`mailto:${info.getValue() as string}`}
-            className="text-blue-400 hover:text-blue-300 underline"
-          >
-            {info.getValue() as string}
+        accessorKey: "email",
+        header: ({ column }) => <SortableHeader label="Email" column={column} />,
+        cell: ({ row }) => row.original.email ? (
+          <a className="text-sm underline underline-offset-4 hover:text-primary" href={`mailto:${row.original.email}`}>
+            {row.original.email}
           </a>
-        ),
+        ) : <EmptyValue />,
       },
       {
-        accessorKey: 'phone',
-        header: 'Phone',
-        cell: (info) => (
-          <span className="text-zinc-400">{info.getValue() as string}</span>
-        ),
+        accessorKey: "phone",
+        header: ({ column }) => <SortableHeader label="Phone" column={column} />,
+        cell: ({ row }) => row.original.phone || <EmptyValue />,
       },
       {
-        accessorKey: 'company',
-        header: 'Company',
-        cell: (info) => (
-          <span className="text-zinc-300">{info.getValue() as string}</span>
-        ),
+        accessorKey: "company",
+        header: ({ column }) => <SortableHeader label="Company" column={column} />,
+        cell: ({ row }) => row.original.company || <EmptyValue />,
       },
       {
-        accessorKey: 'notes',
-        header: 'Notes',
-        cell: (info) => (
-          <span className="text-zinc-500 italic">{info.getValue() as string}</span>
-        ),
+        accessorKey: "linkedinUrl",
+        header: "LinkedIn",
+        cell: ({ row }) => row.original.linkedinUrl ? (
+          <a
+            className="inline-flex items-center gap-1 text-sm underline underline-offset-4 hover:text-primary"
+            href={row.original.linkedinUrl}
+            target="_blank"
+            rel="noreferrer noopener"
+            aria-label={`LinkedIn profile for ${row.original.firstName} ${row.original.lastName}`}
+          >
+            Profile
+            <ExternalLink data-icon="inline-end" />
+          </a>
+        ) : <EmptyValue />,
       },
       {
-        id: 'actions',
-        header: 'Actions',
-        cell: (info) => (
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleEdit(info.row.original)}
-              className="p-1.5 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-300 transition-colors"
-              title="Edit"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-              </svg>
-            </button>
-            <button
-              onClick={() => handleDelete(info.row.original.id)}
-              className="p-1.5 rounded bg-red-900/50 hover:bg-red-800 text-red-300 transition-colors"
-              title="Delete"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              </svg>
-            </button>
+        accessorKey: "notes",
+        header: "Notes",
+        cell: ({ row }) => row.original.notes ? (
+          <span className="block max-w-64 truncate text-muted-foreground" title={row.original.notes}>
+            {row.original.notes}
+          </span>
+        ) : <EmptyValue />,
+      },
+      {
+        id: "actions",
+        header: () => <span className="sr-only">Actions</span>,
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex justify-end gap-1">
+            <Button type="button" variant="ghost" size="icon" onClick={() => handleEdit(row.original)}>
+              <Pencil />
+              <span className="sr-only">Edit {row.original.firstName} {row.original.lastName}</span>
+            </Button>
+            <Button type="button" variant="ghost" size="icon" onClick={() => void handleDelete(row.original.id)}>
+              <Trash2 />
+              <span className="sr-only">Delete {row.original.firstName} {row.original.lastName}</span>
+            </Button>
           </div>
         ),
       },
     ],
-    []
+    [handleDelete, handleEdit],
   );
 
   const table = useReactTable({
     data,
     columns,
-    state: {
-      sorting,
-      globalFilter,
-    },
+    state: { sorting, globalFilter },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 10,
-      },
-    },
+    initialState: { pagination: { pageSize: 10 } },
   });
 
-  const handleAdd = () => {
-    setEditingEntry(null);
-    setFormData({ first_name: '', last_name: '', email: '', phone: '', company: '', notes: '' });
-    setIsModalOpen(true);
+  const handleDialogChange = (open: boolean) => {
+    if (!isSaving) setIsDialogOpen(open);
+    if (!open) setFormError(null);
   };
 
-  const handleEdit = (entry: Person) => {
-    setEditingEntry(entry);
-    setFormData({
-      first_name: entry.first_name,
-      last_name: entry.last_name,
-      email: entry.email,
-      phone: entry.phone,
-      company: entry.company,
-      notes: entry.notes,
-    });
-    setIsModalOpen(true);
-  };
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSaving(true);
+    setFormError(null);
 
-  const handleDelete = async (id: number) => {
-    if (confirm('Are you sure you want to delete this person?')) {
-      try {
-        const response = await fetch(`/api/people/${id}`, { method: 'DELETE' });
-        if (!response.ok) throw new Error('Failed to delete');
-        setData(data.filter((item) => item.id !== id));
-      } catch (err) {
-        alert('Failed to delete person');
-      }
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
     try {
-      if (editingEntry) {
-        const response = await fetch(`/api/people/${editingEntry.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-        if (!response.ok) throw new Error('Failed to update');
-        const updated = await response.json();
-        setData(data.map((item) => (item.id === editingEntry.id ? updated : item)));
-      } else {
-        const response = await fetch('/api/people', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData),
-        });
-        if (!response.ok) throw new Error('Failed to create');
-        const newEntry = await response.json();
-        setData([...data, newEntry]);
+      const response = await fetch(editingEntry ? `/api/people/${editingEntry.id}` : "/api/people", {
+        method: editingEntry ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        throw new Error(await readApiError(response));
       }
-      setIsModalOpen(false);
-    } catch (err) {
-      alert('Failed to save person');
+
+      const savedPerson = (await response.json()) as Person;
+      setData((current) => editingEntry
+        ? current.map((person) => person.id === editingEntry.id ? savedPerson : person)
+        : [savedPerson, ...current]);
+      setIsDialogOpen(false);
+    } catch (caughtError) {
+      setFormError(caughtError instanceof Error ? caughtError.message : "Failed to save person.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-zinc-400">Loading...</div>
-      </div>
-    );
+    return <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">Loading people...</div>;
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-400">Error: {error}</div>
+      <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+        <p className="text-sm text-destructive">{error}</p>
+        <Button type="button" variant="outline" onClick={() => void fetchData()}>Try again</Button>
       </div>
     );
   }
 
   return (
-    <div className="w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <input
-          type="text"
-          placeholder="Search..."
+    <div className="flex w-full flex-col gap-4">
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <Input
+          aria-label="Search people"
+          type="search"
+          placeholder="Search people"
           value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-          className="px-4 py-2 bg-zinc-900 border border-zinc-700 rounded-lg text-zinc-50 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600 w-full sm:w-64"
+          onChange={(event) => setGlobalFilter(event.target.value)}
+          className="w-full sm:max-w-xs"
         />
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M5 12h14" />
-            <path d="M12 5v14" />
-          </svg>
+        <Button type="button" onClick={handleAdd}>
+          <Plus data-icon="inline-start" />
           Add Person
-        </button>
+        </Button>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-zinc-800">
-        <table className="w-full bg-black">
-          <thead className="bg-zinc-900">
+      <div className="overflow-hidden rounded-md border bg-card">
+        <Table>
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className="px-4 py-3 text-left text-sm font-semibold text-zinc-400 cursor-pointer hover:text-zinc-200 hover:bg-zinc-800 transition-colors select-none"
-                  >
-                    <div className="flex items-center gap-2">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {{
-                        asc: (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m18 15-6-6-6 6" />
-                          </svg>
-                        ),
-                        desc: (
-                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="m6 9 6 6 6-6" />
-                          </svg>
-                        ),
-                      }[header.column.getIsSorted() as string] ?? null}
-                    </div>
-                  </th>
+                  <TableHead key={header.id} className={header.column.id === "actions" ? "text-right" : undefined}>
+                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                  </TableHead>
                 ))}
-              </tr>
+              </TableRow>
             ))}
-          </thead>
-          <tbody className="divide-y divide-zinc-800">
-            {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="hover:bg-zinc-900/50 transition-colors">
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length > 0 ? table.getRowModel().rows.map((row) => (
+              <TableRow key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3 text-sm">
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
+                  <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+              </TableRow>
+            )) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
+                  {globalFilter ? "No people match your search." : "No people have been added yet."}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mt-4">
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
-          <span>Rows per page:</span>
+      <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
+        <label className="flex items-center gap-2 text-sm text-muted-foreground">
+          Rows per page
           <select
             value={table.getState().pagination.pageSize}
-            onChange={(e) => table.setPageSize(Number(e.target.value))}
-            className="bg-zinc-900 border border-zinc-700 rounded px-2 py-1 text-zinc-50 focus:outline-none"
+            onChange={(event) => table.setPageSize(Number(event.target.value))}
+            className="h-8 rounded-md border bg-background px-2 text-foreground outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           >
-            {[10, 25, 50].map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
+            {[10, 25, 50].map((size) => <option key={size} value={size}>{size}</option>)}
           </select>
-        </div>
-        <div className="flex items-center gap-2 text-sm text-zinc-400">
-          <span>
-            Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+        </label>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            Page {table.getState().pagination.pageIndex + 1} of {Math.max(1, table.getPageCount())}
           </span>
-          <div className="flex gap-1">
-            <button
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="p-2 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m15 18-6-6 6-6" />
-              </svg>
-            </button>
-            <button
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="p-2 rounded bg-zinc-800 hover:bg-zinc-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="m9 18 6-6-6-6" />
-              </svg>
-            </button>
-          </div>
+          <Button type="button" variant="outline" size="icon" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+            <ChevronLeft />
+            <span className="sr-only">Previous page</span>
+          </Button>
+          <Button type="button" variant="outline" size="icon" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+            <ChevronRight />
+            <span className="sr-only">Next page</span>
+          </Button>
         </div>
       </div>
 
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-zinc-900 border border-zinc-700 rounded-xl p-6 w-full max-w-md">
-            <h2 className="text-xl font-semibold text-zinc-50 mb-4">
-              {editingEntry ? 'Edit Person' : 'Add New Person'}
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">First Name</label>
-                  <input
-                    type="text"
+      <Dialog open={isDialogOpen} onOpenChange={handleDialogChange}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{editingEntry ? "Edit Person" : "Add Person"}</DialogTitle>
+            <DialogDescription>
+              Save the contact details you have. Only a first and last name are required.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+            <FieldGroup className="gap-5">
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="person-first-name">First name</FieldLabel>
+                  <Input
+                    id="person-first-name"
                     required
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({ ...formData, first_name: e.target.value })}
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+                    autoComplete="given-name"
+                    value={formData.firstName}
+                    onChange={(event) => setFormData((current) => ({ ...current, firstName: event.target.value }))}
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-400 mb-1">Last Name</label>
-                  <input
-                    type="text"
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="person-last-name">Last name</FieldLabel>
+                  <Input
+                    id="person-last-name"
                     required
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({ ...formData, last_name: e.target.value })}
-                    className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+                    autoComplete="family-name"
+                    value={formData.lastName}
+                    onChange={(event) => setFormData((current) => ({ ...current, lastName: event.target.value }))}
                   />
-                </div>
+                </Field>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Email</label>
-                <input
-                  type="email"
-                  required
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+
+              <Field orientation="horizontal" className="rounded-md border p-4">
+                <FieldContent>
+                  <FieldLabel htmlFor="person-recruiter">Recruiter</FieldLabel>
+                  <FieldDescription>Include this person in recruiter tracking.</FieldDescription>
+                </FieldContent>
+                <Switch
+                  id="person-recruiter"
+                  checked={formData.isRecruiter}
+                  onCheckedChange={(isRecruiter) => setFormData((current) => ({ ...current, isRecruiter }))}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  required
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="person-linkedin">LinkedIn profile</FieldLabel>
+                <Input
+                  id="person-linkedin"
+                  inputMode="url"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  placeholder="linkedin.com/in/profile"
+                  value={formData.linkedinUrl}
+                  onChange={(event) => setFormData((current) => ({ ...current, linkedinUrl: event.target.value }))}
                 />
+              </Field>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="person-email">Email</FieldLabel>
+                  <Input
+                    id="person-email"
+                    type="email"
+                    autoComplete="email"
+                    value={formData.email}
+                    onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))}
+                  />
+                </Field>
+                <Field>
+                  <FieldLabel htmlFor="person-phone">Phone</FieldLabel>
+                  <Input
+                    id="person-phone"
+                    type="tel"
+                    autoComplete="tel"
+                    value={formData.phone}
+                    onChange={(event) => setFormData((current) => ({ ...current, phone: event.target.value }))}
+                  />
+                </Field>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Company</label>
-                <input
-                  type="text"
-                  required
+
+              <Field>
+                <FieldLabel htmlFor="person-company">Company</FieldLabel>
+                <Input
+                  id="person-company"
+                  autoComplete="organization"
                   value={formData.company}
-                  onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+                  onChange={(event) => setFormData((current) => ({ ...current, company: event.target.value }))}
                 />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-zinc-400 mb-1">Notes</label>
-                <textarea
+              </Field>
+
+              <Field>
+                <FieldLabel htmlFor="person-notes">Notes</FieldLabel>
+                <Textarea
+                  id="person-notes"
+                  rows={3}
                   value={formData.notes}
-                  onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={2}
-                  className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-600 resize-none"
+                  onChange={(event) => setFormData((current) => ({ ...current, notes: event.target.value }))}
                 />
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 px-4 py-2 bg-zinc-800 text-zinc-300 rounded-lg hover:bg-zinc-700 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 px-4 py-2 bg-zinc-100 text-black font-medium rounded-lg hover:bg-zinc-200 transition-colors"
-                >
-                  {editingEntry ? 'Save Changes' : 'Add Person'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+              </Field>
+
+              {formError ? <FieldError>{formError}</FieldError> : null}
+            </FieldGroup>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => handleDialogChange(false)} disabled={isSaving}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? "Saving..." : editingEntry ? "Save changes" : "Add Person"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function EmptyValue() {
+  return <span className="text-muted-foreground" aria-label="Not provided">&mdash;</span>;
+}
+
+function SortableHeader({ label, column }: { label: string; column: { toggleSorting: (descending?: boolean) => void; getIsSorted: () => false | "asc" | "desc" } }) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="-ml-3"
+      onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+    >
+      {label}
+      <ChevronsUpDown data-icon="inline-end" />
+    </Button>
+  );
+}
+
+async function readApiError(response: Response) {
+  try {
+    const body = (await response.json()) as { error?: string };
+    return body.error || "Failed to save person.";
+  } catch {
+    return "Failed to save person.";
+  }
 }

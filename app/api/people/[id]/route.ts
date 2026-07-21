@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { parsePersonUpdateInput, PersonInputError } from '@/lib/people';
 
 export async function GET(
   request: Request,
@@ -41,11 +42,7 @@ export async function PUT(
     }
 
     const body = await request.json();
-    const { firstName, lastName, email, phone, company, notes } = body;
-
-    if (!firstName || !lastName || !email || !phone || !company) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
-    }
+    const data = parsePersonUpdateInput(body);
 
     const existing = await prisma.person.findUnique({
       where: { id: personId },
@@ -57,18 +54,15 @@ export async function PUT(
 
     const updatedPerson = await prisma.person.update({
       where: { id: personId },
-      data: {
-        firstName: firstName ?? existing.firstName,
-        lastName: lastName ?? existing.lastName,
-        email: email ?? existing.email,
-        phone: phone ?? existing.phone,
-        company: company ?? existing.company,
-        notes: notes ?? existing.notes,
-      },
+      data,
     });
     
     return NextResponse.json(updatedPerson);
   } catch (error) {
+    if (error instanceof PersonInputError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+
     console.error('Error updating person:', error);
     return NextResponse.json({ error: 'Failed to update person' }, { status: 500 });
   }
