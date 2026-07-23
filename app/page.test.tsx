@@ -27,6 +27,7 @@ const summary: DashboardSummary = {
     { id: "apply", label: "Apply", count: 1, percentage: 25 },
     { id: "interviewing", label: "Interviewing", count: 1, percentage: 25 },
     { id: "offer_accept", label: "Offer/accept", count: 0, percentage: 0 },
+    { id: "rejected", label: "Rejected", count: 0, percentage: 0 },
   ],
   priorityApplications: [
     {

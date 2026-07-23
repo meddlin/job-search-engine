@@ -4,6 +4,7 @@ export const JOB_STATUSES = [
   { id: "apply", label: "Apply" },
   { id: "interviewing", label: "Interviewing" },
   { id: "offer_accept", label: "Offer/accept" },
+  { id: "rejected", label: "Rejected" },
 ] as const;
 
 export type JobStatus = (typeof JOB_STATUSES)[number]["id"];

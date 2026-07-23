@@ -62,6 +62,23 @@ const jobs: DashboardJob[] = [
     dateAdded: "2026-01-03T00:00:00.000Z",
     updatedAt: "2026-01-03T00:00:00.000Z",
   },
+  {
+    id: 4,
+    companyName: "Umbrella",
+    positionTitle: "Security Engineer",
+    status: "rejected",
+    remote: "hybrid",
+    applied: true,
+    notes: null,
+    jobUrl: null,
+    recruiterName: null,
+    recruitingAgency: null,
+    recruiterEmail: null,
+    recruiterPhone: null,
+    recruiterLinkedin: null,
+    dateAdded: "2026-01-04T00:00:00.000Z",
+    updatedAt: "2026-01-04T00:00:00.000Z",
+  },
 ];
 
 const people: DashboardPerson[] = [
@@ -111,21 +128,22 @@ describe("dashboard data", () => {
     const summary = summarizeDashboard({ jobs, people, dataEntries });
 
     expect(summary.metrics).toEqual({
-      totalApplications: 3,
+      totalApplications: 4,
       activePipeline: 2,
       interviewing: 1,
-      applied: 2,
+      applied: 3,
       recruiters: 3,
       targetCompanies: 2,
     });
     expect(summary.pipeline).toEqual([
       { id: "initiation", label: "Initiation", count: 0, percentage: 0 },
       { id: "phone_screen", label: "Phone screen", count: 0, percentage: 0 },
-      { id: "apply", label: "Apply", count: 1, percentage: 33 },
-      { id: "interviewing", label: "Interviewing", count: 1, percentage: 33 },
-      { id: "offer_accept", label: "Offer/accept", count: 1, percentage: 33 },
+      { id: "apply", label: "Apply", count: 1, percentage: 25 },
+      { id: "interviewing", label: "Interviewing", count: 1, percentage: 25 },
+      { id: "offer_accept", label: "Offer/accept", count: 1, percentage: 25 },
+      { id: "rejected", label: "Rejected", count: 1, percentage: 25 },
     ]);
-    expect(summary.priorityApplications.map((job) => job.id)).toEqual([2, 1, 3]);
+    expect(summary.priorityApplications.map((job) => job.id)).toEqual([2, 1, 4, 3]);
   });
 
   it("deduplicates recruiter contacts from applications and saved people", () => {
@@ -174,6 +192,7 @@ describe("dashboard data", () => {
 
   it("formats known and unknown job labels", () => {
     expect(formatStatus("interviewing")).toBe("Interviewing");
+    expect(formatStatus("rejected")).toBe("Rejected");
     expect(formatStatus("unexpected")).toBe("Untracked");
     expect(formatRemote("yes")).toBe("Remote");
     expect(formatRemote(null)).toBe("Unknown");
