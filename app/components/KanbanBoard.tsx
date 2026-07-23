@@ -31,6 +31,7 @@ const COLUMNS: { id: StatusType; label: string }[] = [
   { id: 'apply', label: 'Apply' },
   { id: 'interviewing', label: 'Interviewing' },
   { id: 'offer_accept', label: 'Offer/Accept' },
+  { id: 'rejected', label: 'Rejected' },
 ];
 
 export default function KanbanBoard() {

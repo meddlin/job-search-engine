@@ -79,6 +79,30 @@ describe("/api/jobs", () => {
     });
   });
 
+  it("creates a rejected job application", async () => {
+    const rejectedJob = { ...job, status: "rejected" };
+    prismaMock.jobApplication.create.mockResolvedValue(rejectedJob);
+
+    const response = await POST(
+      new Request("http://localhost/api/jobs", {
+        method: "POST",
+        body: JSON.stringify({
+          companyName: job.companyName,
+          positionTitle: job.positionTitle,
+          status: "rejected",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toEqual(rejectedJob);
+    expect(prismaMock.jobApplication.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        status: "rejected",
+      }),
+    });
+  });
+
   it("rejects invalid status values", async () => {
     const response = await POST(
       new Request("http://localhost/api/jobs", {

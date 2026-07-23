@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       recruiterLinkedin,
     } = body;
 
-    if (status && !['initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept'].includes(status)) {
+    if (status && !['initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept', 'rejected'].includes(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 

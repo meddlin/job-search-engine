@@ -81,15 +81,36 @@ describe("KanbanBoard", () => {
           dateAdded: "2026-01-01T00:00:00.000Z",
           updatedAt: "2026-01-01T00:00:00.000Z",
         },
+        {
+          id: 2,
+          companyName: "Globex",
+          positionTitle: "Backend Engineer",
+          status: "rejected",
+          remote: "yes",
+          applied: true,
+          notes: null,
+          jobUrl: null,
+          jobDescription: null,
+          recruiterName: null,
+          recruitingAgency: null,
+          recruiterEmail: null,
+          recruiterPhone: null,
+          recruiterLinkedin: null,
+          dateAdded: "2026-01-02T00:00:00.000Z",
+          updatedAt: "2026-01-02T00:00:00.000Z",
+        },
       ],
     } as Response);
 
     render(<KanbanBoard />);
 
     expect(await screen.findByText("Frontend Engineer")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 3, name: /Rejected/ })).toBeInTheDocument();
+    expect(screen.getByText("Backend Engineer")).toBeInTheDocument();
     expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.getByText("Globex")).toBeInTheDocument();
     expect(screen.getByText("Hybrid")).toBeInTheDocument();
-    expect(screen.getByText("Applied")).toBeInTheDocument();
+    expect(screen.getAllByText("Applied")).toHaveLength(2);
     expect(screen.getByText("Recruiter: Sam Recruiter")).toBeInTheDocument();
     expect(fetch).toHaveBeenCalledWith("/api/jobs");
   });

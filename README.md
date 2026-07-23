@@ -132,8 +132,8 @@ npm run test:ci
 
 The Data page can run manual company reconnaissance scans with
 [theHarvester](https://github.com/laramies/theHarvester). Scans are started from
-`http://localhost:3000/data`, executed locally through Docker, exported to
-`.osint/theharvester/`, and ingested into PostgreSQL.
+`http://localhost:3000/data`, executed locally through Docker, exported to `.osint/theharvester/`,
+and ingested into PostgreSQL.
 
 Before using OSINT scans, apply the Prisma schema to the local database:
 
@@ -161,8 +161,8 @@ Optional API key and proxy files can be placed at:
 .osint/theharvester/config/proxies.yaml
 ```
 
-The default source list avoids API-key-only providers. Scans are manual only; no
-scheduled or automated scan runner is configured.
+The default source list avoids API-key-only providers. Scans are manual only; no scheduled or
+automated scan runner is configured.
 
 ### Security Scanning
 

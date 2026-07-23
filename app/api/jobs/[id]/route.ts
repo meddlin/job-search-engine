@@ -12,7 +12,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ id: 
 
     const body = await request.json();
 
-    if (body.status && !['initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept'].includes(body.status)) {
+    if (body.status && !['initiation', 'phone_screen', 'apply', 'interviewing', 'offer_accept', 'rejected'].includes(body.status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
 

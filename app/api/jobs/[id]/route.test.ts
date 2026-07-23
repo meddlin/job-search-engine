@@ -74,6 +74,28 @@ describe("/api/jobs/[id]", () => {
     });
   });
 
+  it("updates a job application to rejected", async () => {
+    prismaMock.jobApplication.findUnique.mockResolvedValue(job);
+    prismaMock.jobApplication.update.mockResolvedValue({ ...job, status: "rejected" });
+
+    const response = await PUT(
+      new Request("http://localhost/api/jobs/1", {
+        method: "PUT",
+        body: JSON.stringify({ status: "rejected" }),
+      }),
+      context("1"),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ...job, status: "rejected" });
+    expect(prismaMock.jobApplication.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: expect.objectContaining({
+        status: "rejected",
+      }),
+    });
+  });
+
   it("returns 400 for invalid IDs", async () => {
     const response = await PUT(
       new Request("http://localhost/api/jobs/not-a-number", {
