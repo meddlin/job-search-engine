@@ -39,7 +39,7 @@ jobs:
 
       - name: Upload OpenGrep SARIF
         if: always() && hashFiles('opengrep.sarif') != ''
-        uses: github/codeql-action/upload-sarif@eec0bff2f6c15bf3f1e8a0152f94d17664a06a06 # v4
+        uses: github/codeql-action/upload-sarif@776237d428f23fefc3d9e0fe1962921cbcd53e17 # v4
         with:
           sarif_file: opengrep.sarif
           category: opengrep
